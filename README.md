@@ -1,4 +1,4 @@
-﻿# Snake-Game
+﻿# Culebrita
 📋 Datos del grupo
 
 Integrante: Jason Stalyn Oña Ayala
@@ -43,3 +43,4 @@ Se utiliza Pygame para graficar la cuadrícula, la serpiente y la comida.
 Colores definidos para mejorar la visibilidad (verde para la serpiente, rojo para la comida, gris para la cuadrícula).
 
 Mensajes en pantalla y fuente personalizada
+
