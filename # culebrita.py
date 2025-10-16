@@ -1,4 +1,9 @@
 # culebrita.py
+
+import pygame
+import random
+import sys
+
 # --- Configuración ---
 CELL_SIZE = 20
 GRID_WIDTH = 30   # ancho en celdas
