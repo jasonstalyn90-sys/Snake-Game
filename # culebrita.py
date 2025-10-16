@@ -1,157 +1,159 @@
 # culebrita.py
-import pygame
-import random
-import sys
-
 # --- Configuración ---
-TAMANO_CELDA = 20
-ANCHO_CUADRICULA = 30   # ancho en celdas
-ALTO_CUADRICULA = 20    # alto en celdas
-ANCHO_VENTANA = TAMANO_CELDA * ANCHO_CUADRICULA
-ALTO_VENTANA = TAMANO_CELDA * ALTO_CUADRICULA
-FPS_BASE = 10  # velocidad base (frames por segundo)
-PUNTOS_POR_COMIDA = 10
+CELL_SIZE = 20
+GRID_WIDTH = 30   # ancho en celdas
+GRID_HEIGHT = 20  # alto en celdas
+WINDOW_WIDTH = CELL_SIZE * GRID_WIDTH
+WINDOW_HEIGHT = CELL_SIZE * GRID_HEIGHT
+FPS = 10  # velocidad base (frames por segundo)
+POINTS_PER_APPLE = 10
 
 # Colores (R,G,B)
-BLANCO = (255, 255, 255)
-NEGRO = (0, 0, 0)
-VERDE = (0, 180, 0)
-ROJO = (200, 0, 0)
-GRIS = (40, 40, 40)
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GREEN = (0, 180, 0)
+RED = (200, 0, 0)
+GRAY = (40, 40, 40)
 
 # --- Inicialización ---
 pygame.init()
-pantalla = pygame.display.set_mode((ANCHO_VENTANA, ALTO_VENTANA))
-pygame.display.set_caption("Culebrita - Juego Snake")
-reloj = pygame.time.Clock()
-fuente = pygame.font.SysFont(None, 28)
-fuente_grande = pygame.font.SysFont(None, 56)
+screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+pygame.display.set_caption("Culebrita - Snake")
+clock = pygame.time.Clock()
+font = pygame.font.SysFont(None, 28)
+big_font = pygame.font.SysFont(None, 56)
 
 # --- Funciones auxiliares ---
-def dibujar_rectangulo_en_cuadricula(posicion, color):
-    x, y = posicion
-    rectangulo = pygame.Rect(x * TAMANO_CELDA, y * TAMANO_CELDA, TAMANO_CELDA, TAMANO_CELDA)
-    pygame.draw.rect(pantalla, color, rectangulo)
+def draw_rect_at_grid(pos, color):
+    x, y = pos
+    rect = pygame.Rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+    pygame.draw.rect(screen, color, rect)
 
-def posicion_aleatoria_comida(serpiente):
+def random_food_position(snake):
     while True:
-        posicion = (random.randint(0, ANCHO_CUADRICULA - 1), random.randint(0, ALTO_CUADRICULA - 1))
-        if posicion not in serpiente:
-            return posicion
+        pos = (random.randint(0, GRID_WIDTH - 1), random.randint(0, GRID_HEIGHT - 1))
+        if pos not in snake:
+            return pos
 
-def dibujar_cuadricula():
-    for x in range(0, ANCHO_VENTANA, TAMANO_CELDA):
-        pygame.draw.line(pantalla, GRIS, (x, 0), (x, ALTO_VENTANA))
-    for y in range(0, ALTO_VENTANA, TAMANO_CELDA):
-        pygame.draw.line(pantalla, GRIS, (0, y), (ANCHO_VENTANA, y))
+def draw_grid():
+    for x in range(0, WINDOW_WIDTH, CELL_SIZE):
+        pygame.draw.line(screen, GRAY, (x, 0), (x, WINDOW_HEIGHT))
+    for y in range(0, WINDOW_HEIGHT, CELL_SIZE):
+        pygame.draw.line(screen, GRAY, (0, y), (WINDOW_WIDTH, y))
 
-def dibujar_puntaje(puntaje, mejor_puntaje):
-    texto = fuente.render(f"Puntos: {puntaje}  |  Récord: {mejor_puntaje}", True, BLANCO)
-    pantalla.blit(texto, (8, 8))
+def draw_score(score, high_score):
+    text = font.render(f"Puntos: {score}  |  Mejor: {high_score}", True, WHITE)
+    screen.blit(text, (8, 8))
 
 # --- Lógica principal del juego ---
-def ejecutar_juego():
-    inicio_x = ANCHO_CUADRICULA // 2
-    inicio_y = ALTO_CUADRICULA // 2
-    serpiente = [(inicio_x, inicio_y), (inicio_x - 1, inicio_y), (inicio_x - 2, inicio_y)]
-    direccion = (1, 0)  # dx, dy -> comienza moviéndose a la derecha
-    proxima_direccion = direccion
+def run_game():
+    # snake: lista de posiciones (x, y) - cabeza es índice 0
+    start_x = GRID_WIDTH // 2
+    start_y = GRID_HEIGHT // 2
+    snake = [(start_x, start_y), (start_x - 1, start_y), (start_x - 2, start_y)]
+    direction = (1, 0)  # dx, dy  -> empieza moviéndose a la derecha
+    next_direction = direction
 
-    comida = posicion_aleatoria_comida(serpiente)
-    puntaje = 0
-    mejor_puntaje = 0
+    food = random_food_position(snake)
+    score = 0
+    high_score = 0
 
-    umbral_aumento_velocidad = 50  # cada cuántos puntos aumenta la velocidad
-    velocidad_extra = 0
+    speed_increment_threshold = 50  # cada cuántos puntos aumentamos la velocidad
+    extra_speed = 0
 
-    juego_terminado = False
+    game_over = False
 
-    global FPS_BASE
-    fps_actual = FPS_BASE
+    global FPS
+    current_fps = FPS
 
     while True:
         # --- Eventos ---
-        for evento in pygame.event.get():
-            if evento.type == pygame.QUIT:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
 
-            if evento.type == pygame.KEYDOWN:
-                if evento.key == pygame.K_ESCAPE:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
-                if evento.key == pygame.K_r and juego_terminado:
-                    return True  # reiniciar partida
+                if event.key == pygame.K_r and game_over:
+                    # reiniciar partida
+                    return True  # señal para reiniciar
+                # Cambiar dirección (no permitir giro 180º)
+                if event.key == pygame.K_UP and direction != (0, 1):
+                    next_direction = (0, -1)
+                elif event.key == pygame.K_DOWN and direction != (0, -1):
+                    next_direction = (0, 1)
+                elif event.key == pygame.K_LEFT and direction != (1, 0):
+                    next_direction = (-1, 0)
+                elif event.key == pygame.K_RIGHT and direction != (-1, 0):
+                    next_direction = (1, 0)
 
-                # Cambiar dirección (no permitir giro de 180º)
-                if evento.key == pygame.K_UP and direccion != (0, 1):
-                    proxima_direccion = (0, -1)
-                elif evento.key == pygame.K_DOWN and direccion != (0, -1):
-                    proxima_direccion = (0, 1)
-                elif evento.key == pygame.K_LEFT and direccion != (1, 0):
-                    proxima_direccion = (-1, 0)
-                elif evento.key == pygame.K_RIGHT and direccion != (-1, 0):
-                    proxima_direccion = (1, 0)
+        if not game_over:
+            direction = next_direction
+            head_x, head_y = snake[0]
+            dx, dy = direction
+            new_head = (head_x + dx, head_y + dy)
 
-        if not juego_terminado:
-            direccion = proxima_direccion
-            cabeza_x, cabeza_y = serpiente[0]
-            dx, dy = direccion
-            nueva_cabeza = (cabeza_x + dx, cabeza_y + dy)
-
-            # Verificar si sale de los límites
-            fuera_de_limites = (
-                nueva_cabeza[0] < 0 or nueva_cabeza[0] >= ANCHO_CUADRICULA or
-                nueva_cabeza[1] < 0 or nueva_cabeza[1] >= ALTO_CUADRICULA
+            # Rebote con paredes? (opción: que choque y muera)
+            # Aquí implementamos que chocar con la pared termina el juego
+            out_of_bounds = (
+                new_head[0] < 0 or new_head[0] >= GRID_WIDTH or
+                new_head[1] < 0 or new_head[1] >= GRID_HEIGHT
             )
 
-            # Colisión con sí misma
-            colision_con_cuerpo = nueva_cabeza in serpiente
+            # Colisión con el propio cuerpo
+            collision_self = new_head in snake
 
-            if fuera_de_limites or colision_con_cuerpo:
-                juego_terminado = True
+            if out_of_bounds or collision_self:
+                game_over = True
             else:
-                serpiente.insert(0, nueva_cabeza)
-
-                # Comer comida
-                if nueva_cabeza == comida:
-                    puntaje += PUNTOS_POR_COMIDA
-                    comida = posicion_aleatoria_comida(serpiente)
-                    velocidad_extra = puntaje // umbral_aumento_velocidad
-                    fps_actual = FPS_BASE + velocidad_extra
+                snake.insert(0, new_head)  # nueva cabeza
+                # Comer la comida
+                if new_head == food:
+                    score += POINTS_PER_APPLE
+                    # generar nueva comida en posición aleatoria que no choque con la serpiente
+                    food = random_food_position(snake)
+                    # ajustar velocidad según puntaje
+                    extra_speed = score // speed_increment_threshold
+                    current_fps = FPS + extra_speed
                 else:
-                    serpiente.pop()  # eliminar último segmento
+                    snake.pop()  # quitar la cola (se mueve sin crecer)
 
-                if puntaje > mejor_puntaje:
-                    mejor_puntaje = puntaje
+                if score > high_score:
+                    high_score = score
 
-        # --- Dibujar ---
-        pantalla.fill(NEGRO)
-        dibujar_cuadricula()
+        # --- Dibujado ---
+        screen.fill(BLACK)
+        draw_grid()
 
-        # Dibuja la comida
-        dibujar_rectangulo_en_cuadricula(comida, ROJO)
-        # Dibuja la serpiente
-        for i, segmento in enumerate(serpiente):
-            color = VERDE if i == 0 else (0, 220 - min(200, i * 8), 0)
-            dibujar_rectangulo_en_cuadricula(segmento, color)
+        # dibujar comida
+        draw_rect_at_grid(food, RED)
+        # dibujar serpiente
+        for i, segment in enumerate(snake):
+            color = GREEN if i == 0 else (0, 220 - min(200, i*8), 0)  # cabeza más brillante
+            draw_rect_at_grid(segment, color)
 
-        dibujar_puntaje(puntaje, mejor_puntaje)
+        draw_score(score, high_score)
 
-        if juego_terminado:
-            texto_final = fuente_grande.render("¡Fin del juego!", True, BLANCO)
-            texto_instrucciones = fuente.render("Presiona R para reiniciar o Esc para salir", True, BLANCO)
-            rect1 = texto_final.get_rect(center=(ANCHO_VENTANA // 2, ALTO_VENTANA // 2 - 20))
-            rect2 = texto_instrucciones.get_rect(center=(ANCHO_VENTANA // 2, ALTO_VENTANA // 2 + 30))
-            pantalla.blit(texto_final, rect1)
-            pantalla.blit(texto_instrucciones, rect2)
+        if game_over:
+            # Mensaje de game over
+            over_text = big_font.render("¡Game Over!", True, WHITE)
+            instr_text = font.render("Presiona R para reiniciar o Esc para salir", True, WHITE)
+            rect = over_text.get_rect(center=(WINDOW_WIDTH//2, WINDOW_HEIGHT//2 - 20))
+            rect2 = instr_text.get_rect(center=(WINDOW_WIDTH//2, WINDOW_HEIGHT//2 + 30))
+            screen.blit(over_text, rect)
+            screen.blit(instr_text, rect2)
 
         pygame.display.flip()
-        reloj.tick(fps_actual)
 
-# --- Bucle principal ---
+        # --- Control de frames ---
+        clock.tick(current_fps)
+
+# --- Ciclo principal para permitir reinicios ---
 if __name__ == "__main__":
     while True:
-        reiniciar = ejecutar_juego()
-        if not reiniciar:
+        restart = run_game()
+        if not restart:
             break
